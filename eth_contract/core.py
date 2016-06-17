@@ -3,11 +3,18 @@ import hashlib
 import collections
 import itertools
 
+from rlp.utils import (
+    encode_hex,
+)
+
 from eth_contract.functions import (
     Function,
     FunctionGroup,
 )
 from eth_contract.events import Event
+from eth_contract.utils import (
+    str_to_bytes,
+)
 
 
 class ContractBase(object):
@@ -27,7 +34,7 @@ class ContractBase(object):
         if args:
             if cls._config.constructor is None:
                 raise ValueError("This contract does not appear to have a constructor")
-            data += cls._config.constructor.abi_args_signature(args).encode('hex')
+            data += encode_hex(cls._config.constructor.abi_args_signature(args))
 
         return data
 
@@ -55,7 +62,7 @@ class Config(object):
     """
     def __init__(self, code, source, abi, functions, events, constructor,
                  contract_name=None):
-        self.code = code
+        self.code = str_to_bytes(code)
         self.source = source
         self.abi = abi
         self._functions = functions

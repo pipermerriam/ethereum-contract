@@ -1,8 +1,8 @@
+from rlp.utils import (
+    big_endian_to_int,
+)
 from eth_abi import (
     decode_single,
-)
-from eth_abi.utils import (
-    big_endian_to_int,
 )
 
 from eth_contract import utils

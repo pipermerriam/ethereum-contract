@@ -1,3 +1,7 @@
+from rlp.utils import (
+    encode_hex,
+)
+
 from eth_abi import abi
 
 from eth_contract.common import ContractBound
@@ -86,8 +90,7 @@ class Function(ContractBound):
         """
         prefix = self.encoded_abi_signature
         suffix = self.abi_args_signature(args)
-        data = "{0}{1}".format(prefix, suffix)
-        return data.encode('hex')
+        return encode_hex(prefix + suffix)
 
     def __get__(self, obj, type=None):
         if obj is None:
