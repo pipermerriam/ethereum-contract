@@ -1,4 +1,5 @@
 from rlp.utils import (
+    encode_hex,
     big_endian_to_int,
 )
 from eth_abi import (
@@ -44,9 +45,7 @@ class Event(ContractBound):
 
     @property
     def event_topic(self):
-        return hex(big_endian_to_int(
-            utils.sha3(self.signature)
-        )).strip('L')
+        return b'0x' + encode_hex(utils.sha3(self.signature))
 
     def get_transaction_logs(self, txn_hash):
         txn_receipt = self.contract._meta.blockchain_client.get_transaction_receipt(txn_hash)

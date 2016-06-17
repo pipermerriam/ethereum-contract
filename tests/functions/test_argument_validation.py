@@ -10,14 +10,14 @@ from eth_contract.functions import validate_argument
         ("uint256", 0, True),
         ("uint256", 1, True),
         ("uint256", -1, False),
-        ("uint256", 2 ** 256 - 1, True),
-        ("uint256", 2 ** 256, False),
+        ("uint256", 2**256 - 1, True),
+        ("uint256", 2**256, False),
         # Int
         ("int256", 0, True),
         ("int256", 1, True),
         ("int256", -1, True),
-        ("int256", 2 ** 256 / 2 - 1, True),
-        ("int256", 2 ** 256 / 2, False),
+        ("int256", 2**256 // 2 - 1, True),
+        ("int256", 2**256 // 2, False),
         # bytes32
         ("bytes32", "", True),
         ("bytes32", "1", True),

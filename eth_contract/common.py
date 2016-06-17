@@ -42,7 +42,7 @@ class ContractBound(object):
             name=self.name,
             arg_types=','.join(self.input_types),
         )
-        return signature
+        return str_to_bytes(signature)
 
     @property
     def abi_signature(self):

@@ -4,6 +4,8 @@ from sha3 import sha3_256
 
 if sys.version_info.major == 2:
     str_to_bytes = str
+    int_types = (int, long)
+    text_types = (basestring,)
 else:
     def str_to_bytes(value):
         if isinstance(value, bytearray):
@@ -11,6 +13,9 @@ else:
         if isinstance(value, bytes):
             return value
         return bytes(value, 'utf-8')
+
+    int_types = (int,)
+    text_types = (bytes, str)
 
 
 def strip_0x_prefix(value):
