@@ -26,10 +26,13 @@ def strip_0x_prefix(value):
 
 def clean_args(*args):
     for _type, arg in args:
+        if isinstance(arg, text_types):
+            arg = str_to_bytes(arg)
+
         if _type == 'address':
-            yield strip_0x_prefix(arg)
-        else:
-            yield arg
+            arg = strip_0x_prefix(arg)
+
+        yield arg
 
 
 def sha3(seed):
