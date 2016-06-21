@@ -23,7 +23,8 @@ setup(
     include_package_data=True,
     install_requires=[
         "pysha3>=0.3",
-        "ethereum-abi-utils>=0.1.0",
+        "rlp>=0.4.6",
+        "ethereum-abi-utils>=0.2.1",
     ],
     py_modules=['eth_contract'],
     license="MIT",
@@ -40,7 +41,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 )

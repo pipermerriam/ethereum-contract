@@ -1,3 +1,7 @@
+from rlp.utils import (
+    encode_hex,
+)
+
 from eth_abi import abi
 
 from eth_contract.common import ContractBound
@@ -14,28 +18,28 @@ def validate_argument(_type, value):
         subtype = ''.join((base, sub, ''.join((str(v) for v in remainder))))
         return all(validate_argument(subtype, v) for v in value)
     elif base == 'int':
-        if not isinstance(value, (int, long)):
+        if not isinstance(value, utils.int_types):
             return False
         exp = int(sub)
-        lower_bound = -1 * 2 ** exp / 2
-        upper_bound = (2 ** exp) / 2 - 1
+        lower_bound = -1 * 2 ** exp // 2
+        upper_bound = (2 ** exp) // 2 - 1
         return lower_bound <= value <= upper_bound
     elif base == 'uint':
-        if not isinstance(value, (int, long)):
+        if not isinstance(value, utils.int_types):
             return False
         exp = int(sub)
         lower_bound = 0
         upper_bound = (2 ** exp) - 1
         return lower_bound <= value <= upper_bound
     elif base == 'address':
-        if not isinstance(value, basestring):
+        if not isinstance(value, utils.text_types):
             return False
         _value = value[2:] if value.startswith('0x') else value
         if set(_value).difference('1234567890abcdef'):
             return False
         return len(_value) == 40
     elif base == 'bytes':
-        if not isinstance(value, basestring):
+        if not isinstance(value, utils.text_types):
             return False
         try:
             max_length = int(sub)
@@ -45,7 +49,7 @@ def validate_argument(_type, value):
             raise
         return len(value) <= max_length
     elif base == 'string':
-        return isinstance(value, basestring)
+        return isinstance(value, utils.text_types)
     else:
         raise ValueError("Unsupported base: '{0}'".format(base))
 
@@ -86,8 +90,7 @@ class Function(ContractBound):
         """
         prefix = self.encoded_abi_signature
         suffix = self.abi_args_signature(args)
-        data = "{0}{1}".format(prefix, suffix)
-        return data.encode('hex')
+        return encode_hex(prefix + suffix)
 
     def __get__(self, obj, type=None):
         if obj is None:

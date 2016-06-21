@@ -1,11 +1,14 @@
-from eth_abi import decode_abi
-from eth_abi.utils import (
+from rlp.utils import (
     int_to_big_endian,
     big_endian_to_int,
+)
+from eth_abi import decode_abi
+from eth_abi.utils import (
     zpad,
 )
 from eth_contract.utils import (
     sha3,
+    str_to_bytes,
 )
 
 
@@ -39,14 +42,14 @@ class ContractBound(object):
             name=self.name,
             arg_types=','.join(self.input_types),
         )
-        return signature
+        return str_to_bytes(signature)
 
     @property
     def abi_signature(self):
         """
         Compute the bytes4 signature for the object.
         """
-        return big_endian_to_int(sha3(self.signature)[:4])
+        return big_endian_to_int(sha3(str_to_bytes(self.signature))[:4])
 
     @property
     def encoded_abi_signature(self):
