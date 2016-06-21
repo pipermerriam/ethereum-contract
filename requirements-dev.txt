@@ -1,4 +1,7 @@
 pytest>=2.8.2
 pytest-pythonpath>=0.3
 tox>=1.8.0
-ethereum-tester-client>=0.1.0
+# TODO: re-pin to non-git version once pyethereum with python3 is released.
+# ethereum-tester-client>=0.1.0
+https://github.com/ethereum/pyethereum/tarball/develop
+https://github.com/pipermerriam/ethereum-tester-client/tarball/master
