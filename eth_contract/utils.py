@@ -4,8 +4,8 @@ from sha3 import sha3_256
 
 if sys.version_info.major == 2:
     str_to_bytes = str
-    int_types = (int, long)
-    text_types = (basestring,)
+    int_types = (int, long)  # NOQA `long` not defined in py3
+    text_types = (basestring,)  # NOQA `basestr` not defined in py3
 else:
     def str_to_bytes(value):
         if isinstance(value, bytearray):

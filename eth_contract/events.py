@@ -1,6 +1,5 @@
 from rlp.utils import (
     encode_hex,
-    big_endian_to_int,
 )
 from eth_abi import (
     decode_single,
