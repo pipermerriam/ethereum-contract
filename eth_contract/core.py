@@ -27,8 +27,9 @@ class ContractBase(object):
     runtime = None
     source = None
 
-    def __init__(self, address, blockchain_client):
-        self.blockchain_client = blockchain_client
+    blockchain_client = None
+
+    def __init__(self, address):
         self.address = address
 
     def __str__(self):

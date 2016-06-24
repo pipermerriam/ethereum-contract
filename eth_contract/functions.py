@@ -100,30 +100,11 @@ class Function(ContractBound):
         suffix = self.abi_args_signature(args)
         return encode_hex(prefix + suffix)
 
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self
-        else:
-            return obj._meta.functions[self.name]
+    def transact(self, *fn_args, txn_kwargs=None):
+        data = self.get_call_data(fn_args)
 
-    def __call__(self, *args, **kwargs):
-        if self.constant:
-            return self.call(*args, **kwargs)
-        return self.sendTransaction(*args, **kwargs)
-
-    def s(self, *args, **kwargs):
-        if self.constant:
-            return self(*args, **kwargs)
-        max_wait = kwargs.pop('max_wait', 60)
-        txn_hash = self(*args, **kwargs)
-        txn_receipt = self.contract._meta.blockchain_client.wait_for_transaction(
-            txn_hash,
-            max_wait=max_wait
-        )
-        return txn_hash, txn_receipt
-
-    def sendTransaction(self, *args, **kwargs):
-        data = self.get_call_data(args)
+        if txn_kwargs is None:
+            txn_kwargs = {}
 
         if 'gas' not in kwargs:
             # The gasLimit value on the geth chain seems to continuously
