@@ -1,7 +1,7 @@
 import pkg_resources
 
 from eth_contract.core import (  # NOQA
-    contract,
+    construct_contract_class,
 )
 
 

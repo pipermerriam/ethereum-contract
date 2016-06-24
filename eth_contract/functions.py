@@ -5,10 +5,18 @@ from rlp.utils import (
 from eth_abi import abi
 
 from eth_contract.common import ContractBound
-from eth_contract import utils
+from eth_contract.utils import (
+    is_integer,
+    is_string,
+    remove_0x_prefix,
+)
 
 
 def validate_argument(_type, value):
+    """
+    Given an ethereum `type` and a `value` to be ABI encoded as that type
+    return whether the value can be encoded as that type.
+    """
     base, sub, arr_list = abi.process_type(_type)
 
     if arr_list:
@@ -18,28 +26,28 @@ def validate_argument(_type, value):
         subtype = ''.join((base, sub, ''.join((str(v) for v in remainder))))
         return all(validate_argument(subtype, v) for v in value)
     elif base == 'int':
-        if not isinstance(value, utils.int_types):
+        if not is_integer(value):
             return False
         exp = int(sub)
         lower_bound = -1 * 2 ** exp // 2
         upper_bound = (2 ** exp) // 2 - 1
         return lower_bound <= value <= upper_bound
     elif base == 'uint':
-        if not isinstance(value, utils.int_types):
+        if not is_integer(value):
             return False
         exp = int(sub)
         lower_bound = 0
         upper_bound = (2 ** exp) - 1
         return lower_bound <= value <= upper_bound
     elif base == 'address':
-        if not isinstance(value, utils.text_types):
+        if not is_string(value):
             return False
-        _value = value[2:] if value.startswith('0x') else value
+        _value = remove_0x_prefix(value)
         if set(_value).difference('1234567890abcdef'):
             return False
         return len(_value) == 40
     elif base == 'bytes':
-        if not isinstance(value, utils.text_types):
+        if not is_string(value):
             return False
         try:
             max_length = int(sub)
@@ -49,9 +57,10 @@ def validate_argument(_type, value):
             raise
         return len(value) <= max_length
     elif base == 'string':
-        return isinstance(value, utils.text_types)
+        return is_string(value)
     else:
         raise ValueError("Unsupported base: '{0}'".format(base))
+
 
 GAS_LIMIT_FRACTION = 0.9
 
@@ -81,8 +90,7 @@ class Function(ContractBound):
         """
         if len(self.input_types) != len(args):
             raise ValueError("Expected {0} arguments, only got {1}".format(len(self.input_types), len(args)))  # NOQA
-        scrubbed_args = tuple(utils.clean_args(*zip(self.input_types, args)))
-        return abi.encode_abi(self.input_types, scrubbed_args)
+        return abi.encode_abi(self.input_types, args)
 
     def get_call_data(self, args):
         """
