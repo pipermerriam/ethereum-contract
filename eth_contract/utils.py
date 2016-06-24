@@ -37,3 +37,57 @@ def clean_args(*args):
 
 def sha3(seed):
     return sha3_256(seed).digest()
+
+
+def get_contract_name_from_source(contract_source):
+    left = contract_source.index('contract') + len('contract')
+    right = contract_source.index('{')
+
+    if left < right:
+        contract_name = contract_source[left:right].strip()
+    else:
+        raise ValueError("Could not find a contract name in the provided source")
+
+    return contract_name
+
+
+def construct_contract_docstring(contract_name,
+                                 constructor_sig,
+                                 function_sigs,
+                                 event_sigs):
+    # Construct the components that will make up the docstring for the
+    # contract.
+    if constructor_sig:
+        constructor_docstring = '// Constructor\n' + constructor_sig + ';'
+    else:
+        constructor_docstring = ''
+
+    if event_sigs:
+        events_docstring = '// Events\n' + (
+            '\n'.join(sig + ';' for sig in event_sigs)
+        )
+    else:
+        events_docstring = ''
+
+    if function_sigs:
+        functions_docstring = '// Functions\n' + (
+            '\n'.join(sig + ';' for sig in function_sigs)
+        )
+    else:
+        functions_docstring = ''
+
+    docstring_body = '\n\n'.join([
+        constructor_docstring,
+        events_docstring,
+        functions_docstring,
+    ])
+
+    docstring = """
+    contract {contract_name} {{
+    {{body}}
+    }}
+    """.format(
+        contract_name=contract_name,
+        body=docstring_body,
+    )
+    return docstring
