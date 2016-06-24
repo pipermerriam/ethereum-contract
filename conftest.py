@@ -1,4 +1,6 @@
 import pytest
+import json
+import textwrap
 
 
 @pytest.fixture()
@@ -7,64 +9,79 @@ def blockchain_client():
     return EthTesterClient()
 
 
-@pytest.fixture()
-def math_contract_meta():
-    contract = {
-        'info': {
-            'language': 'Solidity',
-            'languageVersion': '0',
-            'abiDefinition': [
-                {
-                    'inputs': [],
-                    'constant': False,
-                    'type': 'function',
-                    'name': 'return13',
-                    'outputs': [
-                        {'type': 'int256', 'name': 'result'}
-                    ],
-                },
-                {
-                    'inputs': [
-                        {'type': 'int256', 'name': 'a'},
-                        {'type': 'int256', 'name': 'b'},
-                    ],
-                    'constant': False,
-                    'type': 'function',
-                    'name': 'add',
-                    'outputs': [
-                        {'type': 'int256', 'name': 'result'}
-                    ],
-                },
-                {
-                    'inputs': [
-                        {'type': 'int256', 'name': 'a'},
-                    ],
-                    'constant': False,
-                    'type': 'function',
-                    'name': 'multiply7',
-                    'outputs': [
-                        {'type': 'int256', 'name': 'result'},
-                    ],
-                },
-            ],
-            'source': (
-                'contract Math {\n        function add(int a, int b) public returns (int result){\n            result = a + b;\n            return result;\n        }\n\n        function multiply7(int a) public returns (int result){\n            result = a * 7;\n            return result;\n        }\n\n        function return13() public returns (int result) {\n            result = 13;\n            return result;\n        }\n}\n'
-            ),
-            'compilerVersion': '0.9.73',
-            'developerDoc': None,
-            'userDoc': None,
-        },
-        'code': (
-            '0x606060405260f8806100126000396000f30060606040526000357c01000000000000000000000000000000000000000000000000000000009004806316216f3914604b578063a5f3c23b14606a578063dcf537b1146095576049565b005b605460045060e6565b6040518082815260200191505060405180910390f35b607f60048035906020018035906020015060ba565b6040518082815260200191505060405180910390f35b60a460048035906020015060d0565b6040518082815260200191505060405180910390f35b60008183019050805080905060ca565b92915050565b6000600782029050805080905060e1565b919050565b6000600d9050805080905060f5565b9056'
-        ),
+CONTRACT_CODE = b"606060405261022e806100126000396000f360606040523615610074576000357c01000000000000000000000000000000000000000000000000000000009004806316216f391461007657806361bc221a146100995780637cf5dab0146100bc578063a5f3c23b146100e8578063d09de08a1461011d578063dcf537b11461014057610074565b005b610083600480505061016c565b6040518082815260200191505060405180910390f35b6100a6600480505061017f565b6040518082815260200191505060405180910390f35b6100d26004808035906020019091905050610188565b6040518082815260200191505060405180910390f35b61010760048080359060200190919080359060200190919050506101ea565b6040518082815260200191505060405180910390f35b61012a6004805050610201565b6040518082815260200191505060405180910390f35b6101566004808035906020019091905050610217565b6040518082815260200191505060405180910390f35b6000600d9050805080905061017c565b90565b60006000505481565b6000816000600082828250540192505081905550600060005054905080507f3496c3ede4ec3ab3686712aa1c238593ea6a42df83f98a5ec7df9834cfa577c5816040518082815260200191505060405180910390a18090506101e5565b919050565b6000818301905080508090506101fb565b92915050565b600061020d6001610188565b9050610214565b90565b60006007820290508050809050610229565b91905056"
+
+
+CONTRACT_RUNTIME = b"0x60606040523615610074576000357c01000000000000000000000000000000000000000000000000000000009004806316216f391461007657806361bc221a146100995780637cf5dab0146100bc578063a5f3c23b146100e8578063d09de08a1461011d578063dcf537b11461014057610074565b005b610083600480505061016c565b6040518082815260200191505060405180910390f35b6100a6600480505061017f565b6040518082815260200191505060405180910390f35b6100d26004808035906020019091905050610188565b6040518082815260200191505060405180910390f35b61010760048080359060200190919080359060200190919050506101ea565b6040518082815260200191505060405180910390f35b61012a6004805050610201565b6040518082815260200191505060405180910390f35b6101566004808035906020019091905050610217565b6040518082815260200191505060405180910390f35b6000600d9050805080905061017c565b90565b60006000505481565b6000816000600082828250540192505081905550600060005054905080507f3496c3ede4ec3ab3686712aa1c238593ea6a42df83f98a5ec7df9834cfa577c5816040518082815260200191505060405180910390a18090506101e5565b919050565b6000818301905080508090506101fb565b92915050565b600061020d6001610188565b9050610214565b90565b60006007820290508050809050610229565b91905056"
+
+
+CONTRACT_SOURCE = textwrap.dedent(("""
+    contract Math {
+        uint public counter;
+
+        event Increased(uint value);
+
+        function increment() public returns (uint) {
+            return increment(1);
+        }
+
+        function increment(uint amt) public returns (uint result) {
+            counter += amt;
+            result = counter;
+            Increased(result);
+            return result;
+        }
+
+        function add(int a, int b) public returns (int result) {
+            result = a + b;
+            return result;
+        }
+
+        function multiply7(int a) public returns (int result) {
+            result = a * 7;
+            return result;
+        }
+
+        function return13() public returns (int result) {
+            result = 13;
+            return result;
+        }
     }
-    return contract
+""").strip())
+
+CONTRACT_ABI = json.loads('[{"constant":false,"inputs":[],"name":"return13","outputs":[{"name":"result","type":"int256"}],"type":"function"},{"constant":true,"inputs":[],"name":"counter","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"amt","type":"uint256"}],"name":"increment","outputs":[{"name":"result","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"a","type":"int256"},{"name":"b","type":"int256"}],"name":"add","outputs":[{"name":"result","type":"int256"}],"type":"function"},{"constant":false,"inputs":[],"name":"increment","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"a","type":"int256"}],"name":"multiply7","outputs":[{"name":"result","type":"int256"}],"type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"value","type":"uint256"}],"name":"Increased","type":"event"}]')  # NOQA
+
+
+@pytest.fixture(scope="session")
+def MATH_CODE():
+    return CONTRACT_CODE
+
+
+@pytest.fixture(scope="session")
+def MATH_RUNTIME():
+    return CONTRACT_RUNTIME
+
+
+@pytest.fixture(scope="session")
+def MATH_SOURCE():
+    return CONTRACT_SOURCE
+
+
+@pytest.fixture(scope="session")
+def MATH_ABI():
+    return CONTRACT_ABI
 
 
 @pytest.fixture()
-def Math(math_contract_meta):
-    from eth_contract import Contract
-    _Math = Contract(math_contract_meta, 'Math')
+def Math(MATH_CODE, MATH_RUNTIME, MATH_SOURCE, MATH_ABI):
+    from eth_contract import construct_contract_class
+    _Math = construct_contract_class(
+        contract_abi=MATH_ABI,
+        contract_name='Math',
+        contract_source=MATH_SOURCE,
+        contract_code=MATH_CODE,
+        contract_runtime=MATH_RUNTIME,
+    )
     return _Math
 
 
@@ -78,150 +95,3 @@ def deployed_math(Math, blockchain_client):
     contract_addr = deploy_txn_receipt['contractAddress']
     math = Math(contract_addr, blockchain_client)
     return math
-
-
-@pytest.fixture()
-def named_contract_meta():
-    contract = {
-        "code": "0x606060405260405160208060948339016040526060805190602001505b806000600050819055505b50605f8060356000396000f30060606040526000357c01000000000000000000000000000000000000000000000000000000009004806306fdde03146037576035565b005b60406004506056565b6040518082815260200191505060405180910390f35b6000600050548156",
-        "info": {
-            "abiDefinition": [
-                {
-                    "constant": True,
-                    "inputs": [],
-                    "name": "name",
-                    "outputs": [
-                        {
-                            "name": "",
-                            "type": "bytes32"
-                        }
-                    ],
-                    "type": "function"
-                },
-                {
-                    "inputs": [
-                        {
-                            "name": "_name",
-                            "type": "bytes32"
-                        }
-                    ],
-                    "type": "constructor"
-                }
-            ],
-            "compilerVersion": "0.9.74",
-            "developerDoc": {
-                "methods": {}
-            },
-            "language": "Solidity",
-            "languageVersion": "0",
-            "source": "contract Named {\n        bytes32 public name;\n\n        function Named(bytes32 _name) {\n                name = _name;\n        }\n}\n",
-            "userDoc": {
-                "methods": {}
-            }
-        }
-    }
-    return contract
-
-
-@pytest.fixture()
-def Named(named_contract_meta):
-    from eth_contract import Contract
-    _Named = Contract(named_contract_meta, 'Named')
-    return _Named
-
-
-@pytest.fixture()
-def deployed_named(Named, blockchain_client):
-    data = Named.get_deploy_data()
-
-    deploy_txn_hash = blockchain_client.send_transaction(data=data)
-    deploy_txn_receipt = blockchain_client.wait_for_transaction(deploy_txn_hash)
-
-    contract_addr = deploy_txn_receipt['contractAddress']
-    named = Named(contract_addr, blockchain_client)
-    return named
-
-
-@pytest.fixture()
-def logs_events_contract_meta():
-    contract = {
-        'code': '0x6060604052610116806100126000396000f360606040526000357c0100000000000000000000000000000000000000000000000000000000900480631d3778b41461004457806378549c581461006357610042565b005b6100616004803590602001803590602001803590602001506100d0565b005b610086600480359060200180359060200180359060200180359060200150610088565b005b82847f968e08311bcc13cd5d4feae6a3c87bedb195ab51905c8ec75a10580b5b5854c78484604051808381526020018281526020019250505060405180910390a35b50505050565b827fe5091e521791fb0fb6be999dcb6d5031d9f0a8032185b13790f8d2f95e163b1f8383604051808381526020018281526020019250505060405180910390a25b50505056',
-        'info': {
-            'abiDefinition': [
-                {
-                    'constant': False,
-                    'inputs': [
-                        {'name': 'key', 'type': 'bytes32'},
-                        {'name': 'val_a', 'type': 'bytes32'},
-                        {'name': 'val_b', 'type': 'uint256'},
-                    ],
-                    'name': 'logSingleIndex',
-                    'outputs': [],
-                    'type': 'function'
-                },
-                {
-                    'constant': False,
-                    'inputs': [
-                        {'name': 'key_a', 'type': 'bytes32'},
-                        {'name': 'key_b', 'type': 'bytes32'},
-                        {'name': 'val_a', 'type': 'bytes32'},
-                        {'name': 'val_b', 'type': 'uint256'},
-                    ],
-                    'name': 'logDoubleIndex',
-                    'outputs': [],
-                    'type': 'function'
-                },
-                {
-                    'anonymous': False,
-                    'inputs': [
-                        {'indexed': True, 'name': 'key', 'type': 'bytes32'},
-                        {'indexed': False, 'name': 'val_a', 'type': 'bytes32'},
-                        {'indexed': False, 'name': 'val_b', 'type': 'uint256'},
-                    ],
-                    'name': 'SingleIndex',
-                    'type': 'event'
-                },
-                {
-                    'anonymous': False,
-                    'inputs': [
-                        {'indexed': True, 'name': 'key_a', 'type': 'bytes32'},
-                        {'indexed': True, 'name': 'key_b', 'type': 'bytes32'},
-                        {'indexed': False, 'name': 'val_a', 'type': 'bytes32'},
-                        {'indexed': False, 'name': 'val_b', 'type': 'uint256'},
-                    ],
-                    'name': 'DoubleIndex',
-                    'type': 'event'
-                },
-            ],
-            'compilerVersion': '0.1.3-1736fe80',
-            'developerDoc': {
-                'methods': {},
-            },
-            'language': 'Solidity',
-            'languageVersion': '0',
-            'source': 'contract LogsEvents {\n        event SingleIndex(bytes32 indexed key, bytes32 val_a, uint val_b);\n\n        function logSingleIndex(bytes32 key, bytes32 val_a, uint val_b) public {\n                SingleIndex(key, val_a, val_b);\n        }\n\n        event DoubleIndex(bytes32 indexed key_a, bytes32 indexed key_b, bytes32 val_a, uint val_b);\n\n        function logDoubleIndex(bytes32 key_a, bytes32 key_b, bytes32 val_a, uint val_b) public {\n                DoubleIndex(key_a, key_b, val_a, val_b);\n        }\n}\n',
-            'userDoc': {
-                'methods': {},
-            },
-        },
-    }
-    return contract
-
-
-@pytest.fixture()
-def LogsEvents(logs_events_contract_meta):
-    from eth_contract import Contract
-    _LogsEvents = Contract(logs_events_contract_meta, 'LogsEvents')
-    return _LogsEvents
-
-
-@pytest.fixture()
-def deployed_logs_events(LogsEvents, blockchain_client):
-    data = LogsEvents.get_deploy_data()
-
-    deploy_txn_hash = blockchain_client.send_transaction(data=data)
-    deploy_txn_receipt = blockchain_client.wait_for_transaction(deploy_txn_hash)
-
-    contract_addr = deploy_txn_receipt['contractAddress']
-    logs_events = LogsEvents(contract_addr, blockchain_client)
-    return logs_events

@@ -1,7 +1,4 @@
-import copy
-import hashlib
 import collections
-import itertools
 
 from rlp.utils import (
     encode_hex,
@@ -18,75 +15,129 @@ from eth_contract.utils import (
 
 
 class ContractBase(object):
-    def __init__(self, address, blockchain_client):
-        functions = {fn.name: fn for fn in (copy.copy(f) for f in self._config._functions)}
-        events = {ev.name: ev for ev in (copy.copy(e) for e in self._config._events)}
-        for obj in itertools.chain(functions.values(), events.values()):
-            obj._bind(self)
-        self._meta = ContractMeta(address, blockchain_client, functions, events)
+    # instance level variables
+    address = None
+
+    # class level variables
+    name = None
+    constructor = None
+    events = None
+    functions = None
+    code = None
+    runtime = None
+    source = None
+
+    blockchain_client = None
+
+    def __init__(self, address):
+        self.address = address
 
     def __str__(self):
-        return "{name}({address})".format(name=self.__class__.__name__, address=self.address)
+        return str(self.name if self.name else "Unknown")
 
     @classmethod
-    def get_deploy_data(cls, *args):
-        data = cls._config.code
-        if args:
-            if cls._config.constructor is None:
-                raise ValueError("This contract does not appear to have a constructor")
-            data += encode_hex(cls._config.constructor.abi_args_signature(args))
+    def deploy(cls):
+        raise NotImplementedError("TODO")
 
-        return data
+    @classmethod
+    def encodeABI(cls, fn, fn_args):
+        """
+        Return the ABI encoded call data for the provided function.
+        """
+        raise NotImplementedError("TODO")
+
+    def on(self, *args, **kwargs):
+        """
+        Register a callback to be called whenever an event occurs.
+        """
+        raise NotImplementedError("TODO")
+
+    def pastEvents(self, *args, **kwargs):
+        """
+        Register a callback to be called on all past occurrances of an event.
+        """
+        raise NotImplementedError("TODO")
 
     #
-    #  Instance Methods
+    # def tx_data(cls, sender=None, to, gas, gasPrice, value, data):
     #
-    def get_balance(self, block="latest"):
-        return self._meta.blockchain_client.get_balance(self._meta.address, block=block)
+
+    @classmethod
+    def estimateGas(cls, *args, **kwargs):
+        raise NotImplementedError("TODO")
+
+    def call(self, *args, **kwargs):
+        raise NotImplementedError("TODO")
+
+    def transact(self, *args, **kwargs):
+        raise NotImplementedError("TODO")
 
 
-class ContractMeta(object):
+def get_contract_name_from_source(contract_source):
+    left = contract_source.index('contract') + len('contract')
+    right = contract_source.index('{')
+
+    if left < right:
+        contract_name = contract_source[left:right].strip()
+    else:
+        raise ValueError("Could not find a contract name in the provided source")
+
+    return contract_name
+
+
+def construct_contract_docstring(contract_name,
+                                 constructor_sig,
+                                 function_sigs,
+                                 event_sigs):
+    # Construct the components that will make up the docstring for the
+    # contract.
+    if constructor_sig:
+        constructor_docstring = '// Constructor\n' + constructor_sig + ';'
+    else:
+        constructor_docstring = ''
+
+    if event_sigs:
+        events_docstring = '// Events\n' + (
+            '\n'.join(sig + ';' for sig in event_sigs)
+        )
+    else:
+        events_docstring = ''
+
+    if function_sigs:
+        functions_docstring = '// Functions\n' + (
+            '\n'.join(sig + ';' for sig in function_sigs)
+        )
+    else:
+        functions_docstring = ''
+
+    docstring_body = '\n\n'.join([
+        constructor_docstring,
+        events_docstring,
+        functions_docstring,
+    ])
+
+    docstring = """
+    contract {contract_name} {{
+    {{body}}
+    }}
+    """.format(
+        contract_name=contract_name,
+        body=docstring_body,
+    )
+    return docstring
+
+
+def parse_contract_abi(contract_abi):
     """
-    Instance level contract data.
+    Parse a contract ABI into Function and Event objects.
     """
-    def __init__(self, address, blockchain_client, functions, events):
-        self.address = address
-        self.blockchain_client = blockchain_client
-        self.functions = functions
-        self.events = events
-
-
-class Config(object):
-    """
-    Contract (class) level contract data.
-    """
-    def __init__(self, code, source, abi, functions, events, constructor,
-                 contract_name=None):
-        self.code = str_to_bytes(code)
-        self.source = source
-        self.abi = abi
-        self._functions = functions
-        self._events = events
-        self.constructor = constructor
-        self.name = contract_name
-
-
-def Contract(contract_meta, contract_name=None):
-    _abi = contract_meta['info']['abiDefinition']
-    code = contract_meta['code']
-    source = contract_meta['info']['source']
-
-    if contract_name is None:
-        contract_name = "Unknown-{0}".format(hashlib.md5(code).hexdigest())
-
-    functions = []
-    events = []
     constructor = None
-
-    _dict = {}
     _functions = collections.defaultdict(list)
+    events = {}
 
-    for signature_item in _abi:
+    # Loop over all of the items in the contract ABI and construct Function or
+    # Event objects for them.
+    for signature_item in contract_abi:
         if signature_item['type'] == 'constructor':
             # Constructors don't need to be part of a contract's methods
             if signature_item.get('inputs'):
@@ -106,47 +157,65 @@ def Contract(contract_meta, contract_name=None):
                 constant=signature_item['constant'],
             )
             _functions[signature_item['name']].append(func)
+
         elif signature_item['type'] == 'event':
-            if signature_item['name'] in _dict:
+            if signature_item['name'] in events:
                 # TODO: handle namespace conflicts
-                raise ValueError("About to overwrite a function signature for duplicate function name {0}".format(signature_item['name']))  # NOQA
+                raise ValueError("Duplicate Event name: {0}".format(signature_item['name']))  # NOQA
             event = Event(
                 name=signature_item['name'],
                 inputs=signature_item['inputs'],
                 anonymous=signature_item['anonymous'],
             )
-            _dict[signature_item['name']] = event
-            events.append(event)
+            events[event.name] = event
         else:
             raise ValueError("Unknown signature item '{0}'".format(signature_item))
 
-    # Now process all the functions
-    for fn_name, fn_list in _functions.items():
+    # Find sets of functions that have the same name and wrap them in
+    # FunctionGroup objects.
+    functions = []
+
+    for fn_list in _functions.values():
         if len(fn_list) == 1:
-            _dict[fn_name] = fn_list[0]
             functions.append(fn_list[0])
         else:
             fn_group = FunctionGroup(fn_list)
-            _dict[fn_name] = fn_group
             functions.append(fn_group)
 
-    docstring = """
-    contract {contract_name} {{
-    // Events
-    {events}
+    return constructor, events, functions
 
-    // Functions
-    {functions}
-    }}
-    """.format(
+
+def construct_contract_class(contract_abi,
+                             contract_name=None,
+                             contract_code=None,
+                             contract_runtime=None,
+                             contract_source=None):
+    constructor, events, functions = parse_contract_abi(contract_abi)
+
+    if contract_name is None and constructor is not None:
+        contract_name = constructor.name
+    elif contract_name is None and contract_source is not None:
+        try:
+            contract_name = get_contract_name_from_source(contract_source)
+        except ValueError:
+            pass
+
+    docstring = construct_contract_docstring(
         contract_name=contract_name,
-        functions='\n'.join(str(f) for f in functions),
-        events='\n'.join(str(e) for e in events),
+        constructor_sig=str(constructor) if constructor else "",
+        function_sigs=[str(fn) for fn in functions],
+        event_sigs=[str(fn) for fn in events],
     )
 
-    _dict['__doc__'] = docstring
-    _dict['_config'] = Config(
-        code, source, _abi, functions, events, constructor, contract_name,
-    )
+    _dict = {
+        '__doc__': docstring,
+        'name': contract_name,
+        'constructor': constructor,
+        'events': events,
+        'functions': functions,
+        'code': contract_code,
+        'runtime': contract_runtime,
+        'source': contract_source,
+    }
 
     return type(str(contract_name), (ContractBase,), _dict)

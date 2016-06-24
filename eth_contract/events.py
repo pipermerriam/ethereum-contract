@@ -1,6 +1,7 @@
 from rlp.utils import (
     encode_hex,
 )
+
 from eth_abi import (
     decode_single,
 )

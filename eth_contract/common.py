@@ -2,6 +2,7 @@ from rlp.utils import (
     int_to_big_endian,
     big_endian_to_int,
 )
+
 from eth_abi import decode_abi
 from eth_abi.utils import (
     zpad,
